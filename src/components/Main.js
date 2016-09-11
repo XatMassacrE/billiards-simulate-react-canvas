@@ -19,13 +19,10 @@ export default class CanvasComponent extends Component {
     };
     this.config = {
       isMouseDown: false,
-      step: 0,
-
-      isMirror: false,
-      isEdit: false,
       isCue: false,
       isObject: false,
       r: 16,
+      pocketR: 24,
       cueBall: {
 	x: 650,
 	y: 400,
@@ -36,7 +33,7 @@ export default class CanvasComponent extends Component {
 	y: 100,
 	color: 'red'
       },
-      pockets: [{x:0,y:0}]
+      pockets: [{x:0,y:0}, {x:650,y:0,isMiddle:true}, {x:1300,y:0}, {x:0,y:650}, {x:650,y:650,isMiddle:true}, {x:1300,y:650}]
     };
   }
   componentDidMount() {
@@ -51,9 +48,14 @@ export default class CanvasComponent extends Component {
     this.drawCir(this.config.objectBall); 
     this.drawRadial(this.config.pockets[0], this.config.objectBall);
     this.drawRadial(this.config.cueBall, this.config.objectBall); 
+    this.config.pockets.map(point => this.drawPockets(point, point.isMiddle));
     let p = this.refs.angle;
-    let angle = this.getAngle(this.config.pockets[0], this.config.objectBall) - this.getAngle(this.config.objectBall, this.config.cueBall);
+    let angle = this.getAngle(this.config.pockets[0], this.config.objectBall, this.config.objectBall, this.config.cueBall);
     p.innerHTML = `母球与目标球的夹角为${angle}`;
+    let p2 = this.refs.aimat;
+    let aimat = this.getAimat(angle);
+    p2.innerHTML = `此时你应该瞄准目标球的${aimat}处`;
+
   }
   componentWillUpdate() {
     this.clear();
@@ -77,9 +79,12 @@ export default class CanvasComponent extends Component {
     this.drawRadial(this.config.pockets[0], this.config.objectBall);
     this.drawRadial(this.config.cueBall,this.config.objectBall); 
     let p = this.refs.angle;
-    let angle = this.getAngle(this.config.pockets[0], this.config.objectBall) - this.getAngle(this.config.objectBall, this.config.cueBall);
+    let angle = this.getAngle(this.config.pockets[0], this.config.objectBall, this.config.objectBall, this.config.cueBall);
     p.innerHTML = `母球与目标球的夹角为${angle}`;
-
+    this.config.pockets.map(point => this.drawPockets(point, point.isMiddle));
+    let p2 = this.refs.aimat;
+    let aimat = this.getAimat(angle);
+    p2.innerHTML = `此时你应该瞄准目标球的${aimat}处`;
   }
   handleEsc(e) {
     console.log(e);
@@ -156,6 +161,17 @@ export default class CanvasComponent extends Component {
       return true;
     }
   }
+  drawPockets(point, isMiddle) {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    ctx.fillStyle = 'black';
+    let r = this.config.pocketR;
+    if (isMiddle) r = 3/4 * r;
+    ctx.arc(point.x, point.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.closePath();
+    ctx.restore();
+  }
   drawCir(point) {
     const ctx = this.ctx;
     ctx.beginPath();
@@ -165,14 +181,25 @@ export default class CanvasComponent extends Component {
     ctx.closePath();
     ctx.restore();
   }
+  getAimat(angle) {
+    let radial = angle/180 * Math.PI;
+    let aimat = Math.sin(radial);
+    return aimat.toFixed(2);
+  }
   getAngle(point1, point2, point3, point4) {
     let vector1X = point2.x - point1.x;
-    let vector1Y = point2.y - point2.y;
+    let vector1Y = point2.y - point1.y;
     let vector2X = point4.x - point3.x;
     let vector2Y = point4.y - point3.y; 
-    let radian = Math.atan(tan);
+    console.log(vector1X, vector2X, vector1Y, vector2Y);
+    let crossProduct = vector1X * vector2X + vector1Y * vector2Y;
+    let modulo1 = Math.hypot(vector1X, vector1Y);
+    let modulo2 = Math.hypot(vector2X, vector2Y);
+
+    let radian = Math.acos(Math.abs(crossProduct)/(modulo1*modulo2));
     let angle = radian * 180 / Math.PI;
-    return angle;
+    console.log(angle);
+    return Math.round(angle);
   }
   drawRadial(point1, point2) {
     let x = point1.x - point2.x;
@@ -232,6 +259,8 @@ export default class CanvasComponent extends Component {
           This text is displayed if your browser does not support HTML5 Canvas. Please use another browser(maybe Chrome) and try again.
         </canvas>
 	<p ref='angle'>母球与目标球的夹角为</p>
+	<p ref='aimat'>此时你应该瞄准目标球的处</p>
+	<p>瞄准目标球球心为0, 目标球边缘为0.5, 母球与目标球相切为1</p>
       </div>
     );
   }
